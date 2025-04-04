@@ -1,0 +1,225 @@
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { CreateOfficeDto } from 'src/offices/dto/create-office.dto';
+import { UpdateOfficeDto } from 'src/offices/dto/update-office.dto';
+import { Office } from 'src/offices/entities/office.entity';
+import { TimeSlot } from 'src/offices/entities/time-slot.entity';
+import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
+import { OfficeQueryDto, SortOrder } from './dto/office-query.dto';
+import {
+  PaginatedResultDto,
+  PaginationMeta,
+} from 'src/common/dto/pagination-result.dto';
+
+@Injectable()
+export class OfficesService {
+  private readonly logger = new Logger(OfficesService.name);
+
+  constructor(
+    @InjectRepository(Office)
+    private readonly officeRepository: Repository<Office>,
+    @InjectRepository(TimeSlot)
+    private readonly timeSlotRepository: Repository<TimeSlot>,
+    private readonly dataSource: DataSource,
+  ) {}
+
+  async create(createOfficeDto: CreateOfficeDto): Promise<Office> {
+    const { timeSlots: timeSlotsDto, ...officeData } = createOfficeDto;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const office = this.officeRepository.create(officeData);
+      const savedOffice = await queryRunner.manager.save(office);
+
+      if (timeSlotsDto && timeSlotsDto.length > 0) {
+        const slotsToCreate = timeSlotsDto.map((timeSlotDto) => {
+          const timeSlot = this.timeSlotRepository.create({
+            ...timeSlotDto,
+            officeId: savedOffice.id,
+          });
+          return timeSlot;
+        });
+        await queryRunner.manager.save(slotsToCreate);
+      }
+
+      await queryRunner.commitTransaction();
+      const foundOffice = await this.officeRepository.findOneOrFail({
+        where: { id: savedOffice.id },
+        relations: ['timeSlots'],
+      });
+
+      return foundOffice;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async findAll(queryDto: OfficeQueryDto): Promise<PaginatedResultDto<Office>> {
+    this.logger.log(
+      `Consultando consultorios con filtros: ${JSON.stringify(queryDto)}`,
+    );
+
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'name',
+      sortOrder = SortOrder.ASC,
+      search,
+      workStartTimeFrom,
+      workStartTimeTo,
+      filterWorkingDays,
+    } = queryDto;
+
+    const queryBuilder: SelectQueryBuilder<Office> =
+      this.officeRepository.createQueryBuilder('office');
+
+    // --- Búsqueda Global ---
+    if (search) {
+      queryBuilder.where(
+        // Busca en nombre
+        '(office.name ILIKE :search)',
+        { search: `%${search}%` }, // ILIKE para case-insensitive, % para wildcard
+      );
+    }
+
+    // --- Filtrado por Hora Inicio ---
+    if (workStartTimeFrom) {
+      // Asegúrate que workStartTime no sea null antes de comparar
+      queryBuilder.andWhere(
+        'office.workStartTime IS NOT NULL AND office.workStartTime >= :workStartTimeFrom',
+        { workStartTimeFrom },
+      );
+    }
+    if (workStartTimeTo) {
+      queryBuilder.andWhere(
+        'office.workStartTime IS NOT NULL AND office.workStartTime <= :workStartTimeTo',
+        { workStartTimeTo },
+      );
+    }
+
+    // --- Filtrado por Días Laborales ---
+    if (filterWorkingDays && filterWorkingDays.length > 0) {
+      queryBuilder.andWhere('office.workingDays && ARRAY[:...days]::offices_workingdays_enum[]', { days: filterWorkingDays });
+    }
+
+    const validSortFields = [
+      'name',
+      'address',
+      'phone',
+      'workStartTime',
+      'workEndTime',
+      'createdAt',
+    ];
+    if (validSortFields.includes(sortBy)) {
+      // Necesitas prefijar con el alias de la tabla ('office.')
+      queryBuilder.orderBy(`office.${sortBy}`, sortOrder);
+    } else {
+      // Orden por defecto si sortBy no es válido (o lanzar error)
+      queryBuilder.orderBy('office.name', SortOrder.ASC);
+    }
+
+    // --- Paginación ---
+    queryBuilder.skip((page - 1) * limit).take(limit);
+
+    // --- Ejecutar Consulta ---
+    const [offices, totalItems] = await queryBuilder.getManyAndCount();
+
+    // --- Crear Metadatos de Paginación ---
+    const totalPages = Math.ceil(totalItems / limit);
+    const meta: PaginationMeta = {
+      totalItems,
+      itemCount: offices.length,
+      itemsPerPage: limit,
+      totalPages,
+      currentPage: page,
+    };
+
+    this.logger.debug(
+      `Encontrados ${totalItems} consultorios, devolviendo página ${page} con ${offices.length} items.`,
+    );
+    return { data: offices, meta };
+  }
+
+  async findOne(id: string): Promise<Office> {
+    const office = await this.officeRepository.findOne({
+      where: { id },
+      relations: ['timeSlots'], // Cargar timeSlots para la vista detallada
+    });
+    if (!office) {
+      throw new NotFoundException(`Consultorio con ID "${id}" no encontrado.`);
+    }
+    return office;
+  }
+
+  async update(id: string, updateOfficeDto: UpdateOfficeDto): Promise<Office> {
+    const { timeSlots: timeSlotsDto, ...officeData } = updateOfficeDto;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    let updatedOffice: Office;
+
+    try {
+      const office = await this.officeRepository.preload({
+        id,
+        ...officeData,
+      });
+
+      if (!office) {
+        throw new Error(`Consultorio con ID ${id} no encontrado`);
+      }
+
+      updatedOffice = await queryRunner.manager.save(office);
+
+      if (timeSlotsDto !== undefined) {
+        await queryRunner.manager.delete(TimeSlot, { officeId: id });
+
+        if (timeSlotsDto.length > 0) {
+          const slotsToCreate = timeSlotsDto.map((timeSlotDto) => {
+            const timeSlot = this.timeSlotRepository.create({
+              ...timeSlotDto,
+              officeId: id,
+            });
+            return timeSlot;
+          });
+          await queryRunner.manager.save(slotsToCreate);
+        }
+      }
+
+      await queryRunner.commitTransaction();
+
+      updatedOffice = await this.officeRepository.findOneOrFail({
+        where: { id },
+        relations: ['timeSlots'],
+      });
+
+      return updatedOffice;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async remove(id: string): Promise<void> {
+    const office = await this.officeRepository.findOne({ where: { id } });
+
+    if (!office) {
+      throw new Error(`Consultorio con ID ${id} no encontrado`);
+    }
+
+    const result = await this.officeRepository.delete(id);
+
+    if (result.affected === 0) {
+      throw new Error(`No se pudo eliminar el consultorio con ID ${id}`);
+    }
+  }
+}
