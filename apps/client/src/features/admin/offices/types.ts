@@ -1,3 +1,5 @@
+import { TimeSlot } from "../time-slots/types";
+
 export enum DayOfWeek {
   MONDAY = 'MONDAY',
   TUESDAY = 'TUESDAY',
@@ -8,14 +10,6 @@ export enum DayOfWeek {
   SUNDAY = 'SUNDAY'
 }
 
-export interface TimeSlot {
-  id: string;
-  startTime: string;
-  endTime: string;
-  createdAt: Date;
-  updatedAt: Date | null;
-}
-
 export interface Office {
   id: string;
   name: string;
@@ -23,6 +17,7 @@ export interface Office {
   workEndTime: string | null;
   workingDays: DayOfWeek[] | null;
   timeSlots: TimeSlot[];
+  timeSlotsCount: number;
   createdAt: Date;
   updatedAt: Date | null;
 }

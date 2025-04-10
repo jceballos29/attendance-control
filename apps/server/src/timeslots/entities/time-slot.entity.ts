@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-import { Office } from './office.entity';
+import { Office } from '../../offices/entities/office.entity';
 
 @Entity({ name: 'time_slots' })
 @Index(['officeId', 'startTime', 'endTime'], { unique: true })

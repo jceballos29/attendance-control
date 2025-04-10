@@ -41,3 +41,20 @@ export function formatTimeAmPm(timeString: string | null | undefined, locale: st
     return "Error";
   }
 }
+
+/**
+ * Convierte un string de hora 'HH:MM' o 'HH:MM:SS' a minutos desde medianoche.
+ * Devuelve NaN si el formato es inválido o la entrada es null/undefined.
+ */
+export function parseTimeToMinutes(timeString: string | null | undefined): number {
+  if (!timeString) return NaN; // Devuelve NaN para inválidos/nulos
+  const parts = timeString.split(':');
+  if (parts.length < 2) return NaN;
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  // Ignoramos segundos para la comparación de duración total
+  if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    return NaN;
+  }
+  return hours * 60 + minutes;
+}

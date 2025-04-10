@@ -3,7 +3,7 @@ import { OfficesController } from './offices.controller';
 import { OfficesService } from './offices.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Office } from './entities/office.entity';
-import { TimeSlot } from './entities/time-slot.entity';
+import { TimeSlot } from '../timeslots/entities/time-slot.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Office, TimeSlot])],

@@ -1,17 +1,11 @@
-// src/offices/dto/create-office.dto.ts
 import {
-    IsString,
-    IsNotEmpty,
-    IsOptional,
-    MaxLength,
-    IsArray,
-    ArrayMinSize,
-    ValidateNested, // Para validar arrays de objetos
-    IsEnum,
-    Matches,
-  } from 'class-validator';
-  import { Type } from 'class-transformer'; // Para transformar el array anidado
-  import { CreateTimeSlotDto } from './create-time-slot.dto';
+  IsArray, // Para validar arrays de objetos
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  Matches,
+  MaxLength
+} from 'class-validator';
 import { DayOfWeek } from 'src/common/enums/day-of-week.enum';
   
   export class CreateOfficeDto {
@@ -35,10 +29,4 @@ import { DayOfWeek } from 'src/common/enums/day-of-week.enum';
     @IsArray()
     @IsEnum(DayOfWeek, { each: true, message: 'Cada día laborable debe ser un valor válido de DayOfWeek.' })
     workingDays?: DayOfWeek[];
-  
-    @IsOptional() // Hacemos opcional el array de timeSlots al crear
-    @IsArray({ message: 'Las franjas horarias deben ser un array.' })
-    @ValidateNested({ each: true }) // Valida cada objeto dentro del array
-    @Type(() => CreateTimeSlotDto) // Especifica el tipo de objeto dentro del array
-    timeSlots?: CreateTimeSlotDto[];
   }

@@ -3,17 +3,23 @@ import type { Office, DayOfWeek } from "../types";
 import { daysOfWeekOptions } from "../types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, EllipsisVertical } from "lucide-react";
+import {
+  ArrowUpDown,
+  EllipsisVertical,
+  Eye,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatTimeAmPm } from "@/lib/utils";
+import { Link } from "@tanstack/react-router";
 
 const getDayLabel = (dayValue: DayOfWeek): string => {
   const option = daysOfWeekOptions.find((opt) => opt.value === dayValue);
@@ -45,6 +51,7 @@ export const columns: ColumnDef<Office>[] = [
     enableColumnFilter: false,
   },
   {
+    id: "name",
     accessorKey: "name",
     header: ({ column }) => {
       return (
@@ -62,13 +69,8 @@ export const columns: ColumnDef<Office>[] = [
       <div className="font-medium">{row.getValue("name")}</div>
     ),
   },
-  // {
-  //   id: "workHours",
-  //   header: "Horario Laboral",
-  //   accessorFn: (row) =>
-  //     `${row.workStartTime || "N/A"} - ${row.workEndTime || "N/A"}`,
-  // },
   {
+    id: "workStartTime",
     accessorKey: "workStartTime",
     header: ({ column }) => {
       return (
@@ -86,9 +88,9 @@ export const columns: ColumnDef<Office>[] = [
       const startTime = row.getValue("workStartTime") as string | null;
       return formatTimeAmPm(startTime);
     },
-    enableHiding: true,
   },
   {
+    id: "workEndTime",
     accessorKey: "workEndTime",
     header: ({ column }) => {
       return (
@@ -108,6 +110,7 @@ export const columns: ColumnDef<Office>[] = [
     },
   },
   {
+    id: "workingDays",
     accessorKey: "workingDays",
     header: "Días Laborales",
     cell: ({ row }) => {
@@ -134,23 +137,34 @@ export const columns: ColumnDef<Office>[] = [
       );
     },
     enableSorting: false,
+    enableHiding: true,
   },
   {
-    accessorKey: "timeSlots",
+    id: "timeSlotsCount",
+    accessorKey: "timeSlotsCount",
     header: "Franjas",
     cell: ({ row }) => {
-      const slots = row.getValue("timeSlots") as { id: string }[];
-      return <div className="text-left">{slots?.length ?? 0}</div>;
+      const count = row.getValue("timeSlotsCount") as number;
+      return <div className="text-left">{count ?? 0}</div>;
     },
     enableSorting: false,
+    enableHiding: true,
   },
   {
     id: "actions",
     enableHiding: false,
     enableSorting: false,
+    enableColumnFilter: false,
     size: 80,
-    cell: ({ row }) => {
-      const office = row.original;
+    cell: ({ row, table }) => {
+      const office = row.original as Office;
+      const handleDelete = () => {
+        table.options.meta?.handleDeleteClick?.(office);
+      };
+      const handleEdit = () => {
+        table.options.meta?.handleEditClick?.(office);
+      };
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -162,17 +176,29 @@ export const columns: ColumnDef<Office>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(office.id)}
+              className="text-muted-foreground focus:text-muted-foreground"
+              asChild
             >
-              Copiar ID Consultorio
+              <Link
+                to="/admin/offices/$officeId"
+                params={{ officeId: office.id }}
+              >
+                <Eye className="h-4 w-4" />
+                Detalles
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {/* TODO: Implementar */}
-            <DropdownMenuItem>Ver Detalles</DropdownMenuItem>
-            {/* TODO: Implementar */}
-            <DropdownMenuItem>Editar</DropdownMenuItem>
-            {/* TODO: Implementar */}
-            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem
+              className="text-muted-foreground focus:text-muted-foreground"
+              onClick={handleEdit}
+            >
+              <Pencil className="h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+              onClick={handleDelete}
+            >
+              <Trash2 className="h4- w-4 text-destructive" />
               Eliminar
             </DropdownMenuItem>
           </DropdownMenuContent>

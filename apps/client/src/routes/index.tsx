@@ -8,7 +8,7 @@ function IndexComponent() {
   return (
     <div className="w-full h-full">
       <h1 className="font-bold text-xl">Control de Asistencia</h1>
-      <Link to="/offices">Consultorios</Link>
+      <Link to="/admin">Administración</Link>
     </div>
   );
 }

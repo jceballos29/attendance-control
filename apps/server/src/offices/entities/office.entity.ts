@@ -7,7 +7,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
-import { TimeSlot } from './time-slot.entity';
+import { TimeSlot } from '../../timeslots/entities/time-slot.entity';
 
 @Entity({ name: 'offices' })
 export class Office {

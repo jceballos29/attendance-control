@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CreateOfficeDto } from 'src/offices/dto/create-office.dto';
 import { UpdateOfficeDto } from 'src/offices/dto/update-office.dto';
 import { Office } from 'src/offices/entities/office.entity';
-import { TimeSlot } from 'src/offices/entities/time-slot.entity';
 import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import { OfficeQueryDto, SortOrder } from './dto/office-query.dto';
 import {
@@ -18,32 +17,18 @@ export class OfficesService {
   constructor(
     @InjectRepository(Office)
     private readonly officeRepository: Repository<Office>,
-    @InjectRepository(TimeSlot)
-    private readonly timeSlotRepository: Repository<TimeSlot>,
     private readonly dataSource: DataSource,
   ) {}
 
   async create(createOfficeDto: CreateOfficeDto): Promise<Office> {
-    const { timeSlots: timeSlotsDto, ...officeData } = createOfficeDto;
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      const office = this.officeRepository.create(officeData);
+      const office = this.officeRepository.create(createOfficeDto);
       const savedOffice = await queryRunner.manager.save(office);
-
-      if (timeSlotsDto && timeSlotsDto.length > 0) {
-        const slotsToCreate = timeSlotsDto.map((timeSlotDto) => {
-          const timeSlot = this.timeSlotRepository.create({
-            ...timeSlotDto,
-            officeId: savedOffice.id,
-          });
-          return timeSlot;
-        });
-        await queryRunner.manager.save(slotsToCreate);
-      }
 
       await queryRunner.commitTransaction();
       const foundOffice = await this.officeRepository.findOneOrFail({
@@ -108,6 +93,8 @@ export class OfficesService {
       queryBuilder.andWhere('office.workingDays && ARRAY[:...days]::offices_workingdays_enum[]', { days: filterWorkingDays });
     }
 
+    queryBuilder.loadRelationCountAndMap('office.timeSlotsCount', 'office.timeSlots');
+
     const validSortFields = [
       'name',
       'address',
@@ -158,8 +145,7 @@ export class OfficesService {
   }
 
   async update(id: string, updateOfficeDto: UpdateOfficeDto): Promise<Office> {
-    const { timeSlots: timeSlotsDto, ...officeData } = updateOfficeDto;
-
+    
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -169,7 +155,7 @@ export class OfficesService {
     try {
       const office = await this.officeRepository.preload({
         id,
-        ...officeData,
+        ...updateOfficeDto,
       });
 
       if (!office) {
@@ -177,21 +163,6 @@ export class OfficesService {
       }
 
       updatedOffice = await queryRunner.manager.save(office);
-
-      if (timeSlotsDto !== undefined) {
-        await queryRunner.manager.delete(TimeSlot, { officeId: id });
-
-        if (timeSlotsDto.length > 0) {
-          const slotsToCreate = timeSlotsDto.map((timeSlotDto) => {
-            const timeSlot = this.timeSlotRepository.create({
-              ...timeSlotDto,
-              officeId: id,
-            });
-            return timeSlot;
-          });
-          await queryRunner.manager.save(slotsToCreate);
-        }
-      }
 
       await queryRunner.commitTransaction();
 

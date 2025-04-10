@@ -53,3 +53,37 @@ export const createOfficeSchema = z
   );
 
 export type CreateOfficeInput = z.infer<typeof createOfficeSchema>;
+
+export const updateOfficeSchema = z.object({
+  name: z.string().min(1, { message: "El nombre es obligatorio." }).max(255).optional(),
+  workStartTime: z
+    .string()
+    .regex(
+      /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/,
+      "La hora de inicio laboral es obligatoria"
+    )
+    .optional(),
+  workEndTime: z
+    .string()
+    .regex(
+      /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/,
+      "La hora de fin laboral es obligatoria"
+    )
+    .optional(),
+  workingDays: z.array(z.nativeEnum(DayOfWeek)).optional(),
+  timeSlots: z.array(timeSlotSchema).optional(),
+}).refine(
+  (data) => {
+    if (data.workEndTime && data.workStartTime) {
+      return data.workEndTime > data.workStartTime;
+    }
+    return true;
+  },
+  {
+    message:
+      "La hora de fin laboral debe ser posterior a la hora de inicio laboral",
+    path: ["workEndTime"],
+  }
+);
+
+export type UpdateOfficeInput = z.infer<typeof updateOfficeSchema>;

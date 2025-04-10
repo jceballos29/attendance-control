@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OfficesModule } from './offices/offices.module';
+import { TimeSlotsModule } from './timeslots/time-slots.module';
 
 @Module({
   imports: [
@@ -23,10 +24,11 @@ import { OfficesModule } from './offices/offices.module';
         database: configService.get<string>('DB_DATABASE'),
         autoLoadEntities: true,
         synchronize: configService.get<string>('NODE_ENV') === 'development',
-        logging: true,
+        logging: false,
       })
     }),
-    OfficesModule
+    OfficesModule,
+    TimeSlotsModule
   ],
   controllers: [AppController],
   providers: [AppService],

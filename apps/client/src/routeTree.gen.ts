@@ -11,14 +11,18 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as OfficesImport } from './routes/offices'
+import { Route as AdminImport } from './routes/admin'
 import { Route as IndexImport } from './routes/index'
+import { Route as AdminIndexImport } from './routes/admin/index'
+import { Route as AdminOfficesImport } from './routes/admin/offices'
+import { Route as AdminOfficesIndexImport } from './routes/admin/offices/index'
+import { Route as AdminOfficesOfficeIdImport } from './routes/admin/offices/$officeId'
 
 // Create/Update Routes
 
-const OfficesRoute = OfficesImport.update({
-  id: '/offices',
-  path: '/offices',
+const AdminRoute = AdminImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -26,6 +30,30 @@ const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,
+} as any)
+
+const AdminIndexRoute = AdminIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+
+const AdminOfficesRoute = AdminOfficesImport.update({
+  id: '/offices',
+  path: '/offices',
+  getParentRoute: () => AdminRoute,
+} as any)
+
+const AdminOfficesIndexRoute = AdminOfficesIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminOfficesRoute,
+} as any)
+
+const AdminOfficesOfficeIdRoute = AdminOfficesOfficeIdImport.update({
+  id: '/$officeId',
+  path: '/$officeId',
+  getParentRoute: () => AdminOfficesRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -39,51 +67,128 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
-    '/offices': {
-      id: '/offices'
-      path: '/offices'
-      fullPath: '/offices'
-      preLoaderRoute: typeof OfficesImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminImport
       parentRoute: typeof rootRoute
+    }
+    '/admin/offices': {
+      id: '/admin/offices'
+      path: '/offices'
+      fullPath: '/admin/offices'
+      preLoaderRoute: typeof AdminOfficesImport
+      parentRoute: typeof AdminImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexImport
+      parentRoute: typeof AdminImport
+    }
+    '/admin/offices/$officeId': {
+      id: '/admin/offices/$officeId'
+      path: '/$officeId'
+      fullPath: '/admin/offices/$officeId'
+      preLoaderRoute: typeof AdminOfficesOfficeIdImport
+      parentRoute: typeof AdminOfficesImport
+    }
+    '/admin/offices/': {
+      id: '/admin/offices/'
+      path: '/'
+      fullPath: '/admin/offices/'
+      preLoaderRoute: typeof AdminOfficesIndexImport
+      parentRoute: typeof AdminOfficesImport
     }
   }
 }
 
 // Create and export the route tree
 
+interface AdminOfficesRouteChildren {
+  AdminOfficesOfficeIdRoute: typeof AdminOfficesOfficeIdRoute
+  AdminOfficesIndexRoute: typeof AdminOfficesIndexRoute
+}
+
+const AdminOfficesRouteChildren: AdminOfficesRouteChildren = {
+  AdminOfficesOfficeIdRoute: AdminOfficesOfficeIdRoute,
+  AdminOfficesIndexRoute: AdminOfficesIndexRoute,
+}
+
+const AdminOfficesRouteWithChildren = AdminOfficesRoute._addFileChildren(
+  AdminOfficesRouteChildren,
+)
+
+interface AdminRouteChildren {
+  AdminOfficesRoute: typeof AdminOfficesRouteWithChildren
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminOfficesRoute: AdminOfficesRouteWithChildren,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/offices': typeof OfficesRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/offices': typeof AdminOfficesRouteWithChildren
+  '/admin/': typeof AdminIndexRoute
+  '/admin/offices/$officeId': typeof AdminOfficesOfficeIdRoute
+  '/admin/offices/': typeof AdminOfficesIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/offices': typeof OfficesRoute
+  '/admin': typeof AdminIndexRoute
+  '/admin/offices/$officeId': typeof AdminOfficesOfficeIdRoute
+  '/admin/offices': typeof AdminOfficesIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
-  '/offices': typeof OfficesRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/offices': typeof AdminOfficesRouteWithChildren
+  '/admin/': typeof AdminIndexRoute
+  '/admin/offices/$officeId': typeof AdminOfficesOfficeIdRoute
+  '/admin/offices/': typeof AdminOfficesIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/offices'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/admin/offices'
+    | '/admin/'
+    | '/admin/offices/$officeId'
+    | '/admin/offices/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/offices'
-  id: '__root__' | '/' | '/offices'
+  to: '/' | '/admin' | '/admin/offices/$officeId' | '/admin/offices'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/admin/offices'
+    | '/admin/'
+    | '/admin/offices/$officeId'
+    | '/admin/offices/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  OfficesRoute: typeof OfficesRoute
+  AdminRoute: typeof AdminRouteWithChildren
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  OfficesRoute: OfficesRoute,
+  AdminRoute: AdminRouteWithChildren,
 }
 
 export const routeTree = rootRoute
@@ -97,14 +202,38 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/offices"
+        "/admin"
       ]
     },
     "/": {
       "filePath": "index.tsx"
     },
-    "/offices": {
-      "filePath": "offices.tsx"
+    "/admin": {
+      "filePath": "admin.tsx",
+      "children": [
+        "/admin/offices",
+        "/admin/"
+      ]
+    },
+    "/admin/offices": {
+      "filePath": "admin/offices.tsx",
+      "parent": "/admin",
+      "children": [
+        "/admin/offices/$officeId",
+        "/admin/offices/"
+      ]
+    },
+    "/admin/": {
+      "filePath": "admin/index.tsx",
+      "parent": "/admin"
+    },
+    "/admin/offices/$officeId": {
+      "filePath": "admin/offices/$officeId.tsx",
+      "parent": "/admin/offices"
+    },
+    "/admin/offices/": {
+      "filePath": "admin/offices/index.tsx",
+      "parent": "/admin/offices"
     }
   }
 }

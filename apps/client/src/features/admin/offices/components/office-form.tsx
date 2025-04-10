@@ -2,37 +2,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useForm } from "@tanstack/react-form";
-import { CreateOfficeInput, createOfficeSchema } from "../schema";
+import {
+  CreateOfficeInput,
+  UpdateOfficeInput,
+} from "../schema";
 import { DayOfWeek, daysOfWeekOptions } from "../types";
 import { Button } from "@/components/ui/button";
+import { z } from "zod";
 
-interface OfficeFormProps {
-  onSubmit: (data: CreateOfficeInput) => Promise<void> | void;
+type OfficeFormData = CreateOfficeInput | UpdateOfficeInput;
+type OfficeFormSchema = z.ZodSchema<OfficeFormData>;
+
+interface OfficeUpsertFormProps {
+  onSubmit: (data: OfficeFormData) => Promise<void> | void;
   onCancel?: () => void;
   isPending?: boolean;
-  defaultValues?: Partial<CreateOfficeInput>;
+  defaultValues?: Partial<OfficeFormData>;
+  schema: OfficeFormSchema;
+  submitLabel?: string;
 }
 
-function OfficeForm({
+function OfficeUpsertForm({
   onSubmit,
   onCancel,
   isPending = false,
-  defaultValues = {
-    name: "",
-    workStartTime: "",
-    workEndTime: "",
-    workingDays: [],
-    timeSlots: [],
-  },
-}: OfficeFormProps) {
+  defaultValues = {},
+  schema,
+  submitLabel = "Guardar",
+}: OfficeUpsertFormProps) {
   const form = useForm({
     defaultValues,
     onSubmit: async ({ value }) => {
-      await onSubmit(value as CreateOfficeInput);
-      form.reset();
+      await onSubmit(value);
     },
     validators: {
-      onSubmit: createOfficeSchema,
+      onSubmit: schema,
     },
   });
 
@@ -84,8 +88,7 @@ function OfficeForm({
                 disabled={isPending}
                 step="1"
               />
-              {field.state.meta.isTouched &&
-              field.state.meta.errors.length ? (
+              {field.state.meta.isTouched && field.state.meta.errors.length ? (
                 <em
                   role="alert"
                   className="text-sm font-medium text-destructive"
@@ -161,7 +164,7 @@ function OfficeForm({
         <Button
           type="button"
           variant="outline"
-          onClick={onCancel} 
+          onClick={onCancel}
           disabled={isPending}
         >
           Cancelar
@@ -173,7 +176,7 @@ function OfficeForm({
               type="submit"
               disabled={!canSubmit || isSubmitting || isPending}
             >
-              {isPending || isSubmitting ? "Guardando..." : "Guardar consultorio"}
+              {isPending || isSubmitting ? "Guardando..." : submitLabel}
             </Button>
           )}
         />
@@ -182,4 +185,4 @@ function OfficeForm({
   );
 }
 
-export default OfficeForm;
+export default OfficeUpsertForm;
