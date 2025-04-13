@@ -4,7 +4,8 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OfficesModule } from './offices/offices.module';
-import { TimeSlotsModule } from './timeslots/time-slots.module';
+import { TimeSlotsModule } from './time-slots/time-slots.module';
+import { JobPositionsModule } from './job-positions/job-positions.module';
 
 @Module({
   imports: [
@@ -28,7 +29,8 @@ import { TimeSlotsModule } from './timeslots/time-slots.module';
       })
     }),
     OfficesModule,
-    TimeSlotsModule
+    TimeSlotsModule,
+    JobPositionsModule
   ],
   controllers: [AppController],
   providers: [AppService],

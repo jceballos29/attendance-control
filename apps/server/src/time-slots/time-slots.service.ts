@@ -2,7 +2,7 @@ import {
   ConflictException,
   Injectable,
   Logger,
-  NotFoundException
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Office } from 'src/offices/entities/office.entity'; // Asegúrate que la ruta sea correcta
@@ -29,9 +29,6 @@ export class TimeSlotsService {
   private async getAndValidateOffice(officeId: string): Promise<Office> {
     const office = await this.officeRepository.findOneBy({ id: officeId });
     if (!office) {
-      this.logger.warn(
-        `Intento de operación en TimeSlot para Office inexistente: ${officeId}`,
-      );
       throw new NotFoundException(
         `Consultorio con ID "${officeId}" no encontrado.`,
       );
@@ -91,7 +88,6 @@ export class TimeSlotsService {
     slotStartTime: string,
     slotEndTime: string,
   ): void {
-
     const isStartValid = slotStartTime >= officeWorkStartTimeDate;
     const isEndValid = slotEndTime <= officeWorkEndTimeDate;
 
@@ -120,20 +116,15 @@ export class TimeSlotsService {
     );
   }
 
-  // --- Métodos Públicos ---
-
   async create(
     officeId: string,
     createTimeSlotDto: CreateTimeSlotDto,
   ): Promise<TimeSlot> {
-    // Asumimos que DTO ya validó startTime < endTime
     const office = await this.getAndValidateOffice(officeId);
 
-    // Validar contra horario de oficina
-    // Nota: Asegúrate que office.workStartTime/EndTime sean Date|null si eso espera la función
     this.validateSlotWithinOfficeHours(
-      office.workStartTime.toString(), // Castear si el tipo de entidad es string pero la función espera Date
-      office.workEndTime.toString(), // Castear si el tipo de entidad es string pero la función espera Date
+      office.workStartTime.toString(), 
+      office.workEndTime.toString(),
       createTimeSlotDto.startTime,
       createTimeSlotDto.endTime,
     );
@@ -157,7 +148,7 @@ export class TimeSlotsService {
   }
 
   async findAllForOffice(officeId: string): Promise<TimeSlot[]> {
-    await this.getAndValidateOffice(officeId); // Solo valida existencia
+    await this.getAndValidateOffice(officeId);
     this.logger.debug(`Buscando TimeSlots para Office ${officeId}`);
     return this.timeSlotRepository.find({
       where: { officeId },
@@ -177,7 +168,6 @@ export class TimeSlotsService {
     id: string,
     updateTimeSlotDto: UpdateTimeSlotDto,
   ): Promise<TimeSlot> {
-    // Asumimos que DTO ya validó startTime < endTime si ambos están presentes
     const timeSlot = await this.timeSlotRepository.preload({
       id: id,
       ...updateTimeSlotDto,
@@ -188,39 +178,32 @@ export class TimeSlotsService {
       );
     }
 
-    // Obtener oficina para validaciones
     const office = await this.getAndValidateOffice(timeSlot.officeId);
 
-    // Validar contra horario de oficina
-    // Nota: Asegúrate que office.workStartTime/EndTime sean Date|null si eso espera la función
     this.validateSlotWithinOfficeHours(
-      office.workStartTime.toString(), // Castear si el tipo de entidad es string pero la función espera Date
-      office.workEndTime.toString(), // Castear si el tipo de entidad es string pero la función espera Date
+      office.workStartTime.toString(),
+      office.workEndTime.toString(),
       timeSlot.startTime.toString(),
       timeSlot.endTime.toString(),
     );
 
-    // Validar superposición
     await this.validateNoOverlap(
       timeSlot.officeId,
       timeSlot.startTime.toString(),
       timeSlot.endTime.toString(),
-      id, // Excluir el propio slot
+      id,
     );
 
     this.logger.log(
       `Actualizando TimeSlot ${id} a ${timeSlot.startTime.toString()}-${timeSlot.endTime.toString()}`,
     );
-    // Guardar la entidad TimeSlot actualizada (TypeORM maneja el update)
     return this.timeSlotRepository.save(timeSlot);
   }
 
   async remove(id: string): Promise<void> {
-    // findOne ya lanza NotFoundException si no existe
     const timeSlot = await this.findOne(id);
-    const result = await this.timeSlotRepository.delete(timeSlot.id); // Usa el ID encontrado por seguridad
+    const result = await this.timeSlotRepository.delete(timeSlot.id);
     if (result.affected === 0) {
-      // Esto no debería ocurrir si findOne tuvo éxito, pero es un doble check
       throw new NotFoundException(
         `No se pudo eliminar TimeSlot con ID "${id}" (affected 0).`,
       );

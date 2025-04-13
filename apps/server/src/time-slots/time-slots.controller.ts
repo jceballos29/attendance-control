@@ -8,13 +8,13 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
-  Put
+  Put,
 } from '@nestjs/common';
 import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
 import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
 import { TimeSlotsService } from './time-slots.service';
 
-@Controller('offices/:officeId/time-slots') 
+@Controller('offices/:officeId/time-slots')
 export class TimeSlotsController {
   constructor(private readonly timeSlotsService: TimeSlotsService) {}
 

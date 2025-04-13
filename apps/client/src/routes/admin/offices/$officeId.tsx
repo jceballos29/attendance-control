@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { JobPositionsManager } from "@/features/admin/job-positions/components/job-positions-manager";
 import { getOfficeById } from "@/features/admin/offices/api";
 import {
   DayOfWeek,
@@ -62,6 +63,7 @@ import {
   Pencil,
   PlusCircle,
   Trash2,
+  UsersIcon,
 } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -141,6 +143,8 @@ function RouteComponent() {
   const [isDeleteSlotDialogOpen, setIsDeleteSlotDialogOpen] =
     React.useState(false);
   const [slotToDelete, setSlotToDelete] = React.useState<TimeSlot | null>(null);
+  const [isJobPositionsDialogOpen, setIsJobPositionsDialogOpen] =
+    React.useState(false);
 
   const isOfficeScheduleFull = React.useMemo(() => {
     const officeStartMinutes = parseTimeToMinutes(office.workStartTime);
@@ -268,14 +272,13 @@ function RouteComponent() {
     deleteSlotMutation.mutate(slotToDelete.id);
   };
 
-  // Calcula defaults para el form de creación una vez
   const createSlotDefaultValues = React.useMemo(
     (): Partial<CreateTimeSlotInput> => ({
       startTime: getDefaultStartTimeForNewSlot(office),
       endTime: "",
     }),
     [office]
-  ); // Depende del office cargado
+  );
 
   // --- Renderizado ---
   return (
@@ -475,6 +478,28 @@ function RouteComponent() {
                   <TabsTrigger value="patients">Pacientes</TabsTrigger>
                 </TabsList>
                 <TabsContent value="employees" className="mt-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-semibold">Empleados Asignados</h4>
+                    <Dialog
+                      open={isJobPositionsDialogOpen}
+                      onOpenChange={setIsJobPositionsDialogOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <UsersIcon className="h-4 w-4 mr-2" />
+                          Gestionar Puestos
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-lg">
+                        <DialogHeader>
+                          <DialogTitle>
+                            Gestionar Puestos de Trabajo
+                          </DialogTitle>
+                        </DialogHeader>
+                        <JobPositionsManager officeId={officeId} />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                   {/* Añadido margen */}
                   {/* TODO: Tabla/Lista de empleados asignados */}
                   <p className="text-sm text-muted-foreground italic">
